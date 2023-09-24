@@ -52,7 +52,9 @@ def run_job(idx, job):
     try:
         current_shell = os.environ.get("SHELL", "/bin/sh")
         logging.info(f"Starting job {idx + 1} in shell {current_shell}: {job.strip()}")
-        proc = subprocess.Popen([current_shell, "-c", job.strip()], env=os.environ, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
+        proc = subprocess.Popen(["bash", "-i", "-c", job.strip()], env=os.environ, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
+
+        #proc = subprocess.Popen([current_shell, "-c", job.strip()], env=os.environ, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
 
         stdout, stderr = proc.communicate()  # This will wait for the process to complete and retrieve its outputs
 
