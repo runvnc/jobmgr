@@ -162,15 +162,36 @@ def delete_job(job_id):
             sf.writelines(statuses)
 
 def clean_jobs():
+    # Check if there are RUNNING jobs
+    with open(STATUS_FILE, 'r') as sf:
+        statuses = sf.readlines()
+        if any([status.strip() == "RUNNING" for status in statuses]):
+            print("Warning: There are jobs currently running. Stopping clean operation.")
+            return
+
+    # Check if daemon is running
+    if is_daemon_running():
+        print("Warning: The daemon is currently running. Please stop the daemon before cleaning.")
+        return
+
+    # Proceed with cleaning if the above conditions are not met
     with file_lock:
-        with open(JOBS_FILE, 'r') as jf, open(STATUS_FILE, 'r') as sf:
-            jobs = jf.readlines()
-            statuses = sf.readlines()
-        clean_jobs = [job for job, status in zip(jobs, statuses) if status.strip() not in ["COMPLETED", "ERROR"]]
-        clean_statuses = [status for status in statuses if status.strip() not in ["COMPLETED", "ERROR"]]
-        with open(JOBS_FILE, 'w') as jf, open(STATUS_FILE, 'w') as sf:
-            jf.writelines(clean_jobs)
-            sf.writelines(clean_statuses)
+        if os.path.exists(JOBS_FILE):
+            os.remove(JOBS_FILE)
+        if os.path.exists(STATUS_FILE):
+            os.remove(STATUS_FILE)
+        
+        for filename in os.listdir(OUTPUT_DIR):
+            file_path = os.path.join(OUTPUT_DIR, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+
+        if os.path.exists(PIDS_FILE):
+            with open(PIDS_FILE, 'w') as f:
+                f.truncate(0)
+
+    print("All job data has been cleaned.")
+
 
 def main():
     if len(sys.argv) < 2:
