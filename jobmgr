@@ -9,12 +9,15 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import threading
 
+BASE_DIR = os.path.expanduser("~/.jobmgr")
+
 # File paths for storing job information
-JOBS_FILE = "jobs.txt"
-STATUS_FILE = "status.txt"
-OUTPUT_DIR = "output"
-PIDS_FILE = "pids.txt"
-DAEMON_LOCK_FILE = 'jobmgr.lock'
+JOBS_FILE = os.path.join(BASE_DIR, "jobs.txt")
+STATUS_FILE = os.path.join(BASE_DIR, "status.txt")
+OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+PIDS_FILE = os.path.join(BASE_DIR, "pids.txt")
+DAEMON_LOCK_FILE = os.path.join(BASE_DIR, 'jobmgr.lock')
+
 
 logging.basicConfig(filename='jobmgr.log', level=logging.INFO, 
                     format='[%(asctime)s] %(levelname)s: %(message)s')
