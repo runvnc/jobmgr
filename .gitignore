@@ -1,0 +1,5 @@
+*.txt
+*.log
+*.lock
+output
+tsleep.sh
