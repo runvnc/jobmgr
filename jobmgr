@@ -18,9 +18,11 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 PIDS_FILE = os.path.join(BASE_DIR, "pids.txt")
 DAEMON_LOCK_FILE = os.path.join(BASE_DIR, 'jobmgr.lock')
 
+LOG_FILE = os.path.join(BASE_DIR, 'jobmgr.log')
 
-logging.basicConfig(filename='jobmgr.log', level=logging.INFO, 
+logging.basicConfig(filename=LOG_FILE, level=logging.INFO, 
                     format='[%(asctime)s] %(levelname)s: %(message)s')
+
 
 file_lock = threading.Lock()
 
@@ -36,7 +38,8 @@ def initialize():
 
 def add_job(command):
     with open(JOBS_FILE, 'a') as f:
-        f.write(command + '\n')
+        # Save the command followed by the current directory
+        f.write(f"{command}|||{os.getcwd()}\n")
     with open(STATUS_FILE, 'a') as f:
         f.write("PENDING\n")
     logging.info(f"Added job: {command}")
@@ -48,15 +51,24 @@ def list_jobs():
     for idx, (job, status) in enumerate(zip(jobs, statuses)):
         print(f"{idx + 1}. [{status.strip()}] {job.strip()}")
 
-def run_job(idx, job):
+def run_job(idx, job_with_dir):
+    # Split the command and the directory
+    job, directory = job_with_dir.split("|||")
+    directory = directory.strip()
+    logging.info(f"Changing to directory: {directory}")
+    
     try:
+        os.chdir(directory)  # Change the current directory
         current_shell = os.environ.get("SHELL", "/bin/sh")
         logging.info(f"Starting job {idx + 1} in shell {current_shell}: {job.strip()}")
+        logging.info(f"Attempting to run: {job}")
+
         proc = subprocess.Popen(["bash", "-i", "-c", job.strip()], env=os.environ, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
 
         #proc = subprocess.Popen([current_shell, "-c", job.strip()], env=os.environ, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
 
         stdout, stderr = proc.communicate()  # This will wait for the process to complete and retrieve its outputs
+        logging.info(f"Job {job} finished with return code: {proc.returncode}")
 
         with file_lock, open(os.path.join(OUTPUT_DIR, f"job_{idx + 1}.txt"), 'w') as f:
             f.write(stdout)
@@ -71,7 +83,8 @@ def run_job(idx, job):
             update_status(idx, "ERROR")
             logging.error(f"Error in job {idx + 1} with code {proc.returncode}: {job.strip()}")
     except Exception as e:
-        logging.error(f"Error running job {idx + 1}: {e}")
+        logging.error(f"Exception during job execution: {e}")
+        logging.exception("Exception traceback:")
         update_status(idx, "ERROR")
 
 
